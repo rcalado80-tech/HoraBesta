@@ -235,6 +235,16 @@
       background: #f1f5f9;
     }
 
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
     .btn-danger {
       color: var(--danger);
       border-color: #fca5a5;
@@ -249,6 +259,77 @@
       color: var(--text-muted);
       font-size: 0.8rem;
       margin-top: 20px;
+    }
+
+    /* Estilos específicos para impressão / exportação em PDF */
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+        color: #000;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .container {
+        max-width: 100%;
+        margin: 0;
+      }
+
+      header {
+        box-shadow: none;
+        border: 1px solid #cbd5e1;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+
+      .controls, .footer-note {
+        display: none !important;
+      }
+
+      .table-container {
+        box-shadow: none;
+      }
+
+      table {
+        min-width: 100%;
+        font-size: 8pt;
+      }
+
+      th, td {
+        padding: 5px 6px;
+        border: 1px solid #cbd5e1 !important;
+      }
+
+      /* Exibe o valor do input em texto limpo durante a impressão */
+      input[type="time"] {
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        font-size: 8.5pt !important;
+        width: auto !important;
+        text-align: center;
+        appearance: none;
+        -moz-appearance: textfield;
+      }
+
+      input[type="time"]::-webkit-calendar-picker-indicator {
+        display: none !important;
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      .summary-card {
+        padding: 10px;
+        border: 1px solid #cbd5e1;
+      }
+
+      .summary-value {
+        font-size: 1.1rem;
+      }
     }
 
     @media (max-width: 768px) {
@@ -277,6 +358,7 @@
             <label for="dailyMeta">Meta/Dia:</label>
             <input type="time" id="dailyMeta" value="08:00">
           </div>
+          <button class="btn btn-primary" onclick="generatePDF()" title="Gerar relatório em PDF ou imprimir">📄 Relatório PDF</button>
           <button class="btn" onclick="resetToDefaults()" title="Preenche os dias úteis com o horário padrão 08h-12h e 13h-17h">Preencher com Padrão</button>
           <button class="btn btn-danger" onclick="clearCurrentMonth()">Limpar Mês</button>
         </div>
@@ -597,6 +679,14 @@
         saveMonthData(ym, emptyData);
         renderMonth();
       }
+    }
+
+    function generatePDF() {
+      const ym = monthPicker.value;
+      const originalTitle = document.title;
+      document.title = `Relatorio_Ponto_${ym}`;
+      window.print();
+      document.title = originalTitle;
     }
 
     // Render inicial
