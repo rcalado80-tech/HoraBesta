@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora de Horas Extras e Ponto</title>
+  <style>
+    :root {
+      --bg-color: #f4f6f9;
+      --card-bg: #ffffff;
+      --text-color: #212529;
+      --text-muted: #6c757d;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --border-color: #e2e8f0;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --neutral: #4b5563;
+      --highlight: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Header / Summary Card */
+    header {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .header-top {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    input[type="month"], input[type="text"], input[type="time"] {
+      padding: 6px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      outline: none;
+      background: #fff;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
+
+    /* Cards de Saldo */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .summary-card {
+      background: var(--highlight);
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid var(--primary);
+    }
+
+    .summary-card.positive {
+      border-left-color: var(--success);
+    }
+
+    .summary-card.negative {
+      border-left-color: var(--danger);
+    }
+
+    .summary-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .summary-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    .text-success { color: var(--success); }
+    .text-danger { color: var(--danger); }
+    .text-neutral { color: var(--neutral); }
+
+    /* Main Table Container */
+    .table-container {
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      overflow-x: auto;
+      margin-bottom: 24px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+      min-width: 900px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
+    }
+
+    th {
+      background-color: #f8fafc;
+      font-weight: 600;
+      color: #475569;
+      white-space: nowrap;
+    }
+
+    .period-header {
+      text-align: center;
+      background-color: #f1f5f9;
+      border-left: 1px solid var(--border-color);
+      border-right: 1px solid var(--border-color);
+    }
+
+    .time-pair {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .time-pair span {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .time-pair input[type="time"] {
+      width: 82px;
+      padding: 4px 6px;
+      font-size: 0.82rem;
+    }
+
+    /* Week row separator / highlight */
+    .weekend-row {
+      background-color: #fafbfc;
+    }
+
+    .week-summary-row {
+      background-color: #f1f5f9;
+      font-weight: bold;
+      border-top: 2px solid var(--border-color);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-positive {
+      background-color: #dcfce7;
+      color: #15803d;
+    }
+
+    .badge-negative {
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .badge-neutral {
+      background-color: #f3f4f6;
+      color: #4b5563;
+    }
+
+    .btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #f1f5f9;
+    }
+
+    .btn-danger {
+      color: var(--danger);
+      border-color: #fca5a5;
+    }
+
+    .btn-danger:hover {
+      background: #fee2e2;
+    }
+
+    .footer-note {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .header-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="header-top">
+        <div>
+          <h1>Controle de Horas Extras & Ponto</h1>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Acompanhamento diário, semanal e mensal de saldo de horas.</p>
+        </div>
+        <div class="controls">
+          <div class="control-group">
+            <label for="monthPicker">Mês de Referência:</label>
+            <input type="month" id="monthPicker">
+          </div>
+          <div class="control-group">
+            <label for="dailyMeta">Meta/Dia:</label>
+            <input type="time" id="dailyMeta" value="08:00">
+          </div>
+          <button class="btn" onclick="resetToDefaults()" title="Preenche os dias úteis com o horário padrão 08h-12h e 13h-17h">Preencher com Padrão</button>
+          <button class="btn btn-danger" onclick="clearCurrentMonth()">Limpar Mês</button>
+        </div>
+      </div>
+
+      <!-- Indicadores de Saldo no Cabeçalho -->
+      <div class="summary-grid">
+        <div class="summary-card" id="cardWorked">
+          <div class="summary-title">Total Trabalhado no Mês</div>
+          <div class="summary-value" id="totalWorked">0h 00m</div>
+        </div>
+        <div class="summary-card" id="cardExpected">
+          <div class="summary-title">Meta de Horas Prevista</div>
+          <div class="summary-value" id="totalExpected">0h 00m</div>
+        </div>
+        <div class="summary-card" id="cardBalance">
+          <div class="summary-title">Saldo Geral (Mês)</div>
+          <div class="summary-value" id="totalBalance">0h 00m</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="table-container">
+      <table id="hoursTable">
+        <thead>
+          <tr>
+            <th rowspan="2">Data</th>
+            <th rowspan="2">Dia da Semana</th>
+            <th colspan="2" class="period-header">Manhã</th>
+            <th colspan="2" class="period-header">Tarde</th>
+            <th colspan="2" class="period-header">Noite</th>
+            <th rowspan="2" style="text-align: center;">Horas Feitas</th>
+            <th rowspan="2" style="text-align: center;">Meta</th>
+            <th rowspan="2" style="text-align: center;">Saldo do Dia</th>
+          </tr>
+          <tr>
+            <th class="period-header">Entrada</th>
+            <th class="period-header">Saída</th>
+            <th class="period-header">Entrada</th>
+            <th class="period-header">Saída</th>
+            <th class="period-header">Entrada</th>
+            <th class="period-header">Saída</th>
+          </tr>
+        </thead>
+        <tbody id="daysBody">
+          <!-- Linhas geradas via JavaScript -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer-note">
+      * Os dados são salvos automaticamente no armazenamento local do seu navegador (LocalStorage). Nenhum dado é enviado para servidores externos.
+    </div>
+  </div>
+
+  <script>
+    const daysBody = document.getElementById('daysBody');
+    const monthPicker = document.getElementById('monthPicker');
+    const dailyMetaInput = document.getElementById('dailyMeta');
+    const totalWorkedEl = document.getElementById('totalWorked');
+    const totalExpectedEl = document.getElementById('totalExpected');
+    const totalBalanceEl = document.getElementById('totalBalance');
+    const cardBalance = document.getElementById('cardBalance');
+
+    const dayNames = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+
+    // Inicialização
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+    monthPicker.value = `${currentYear}-${currentMonth}`;
+
+    let savedMeta = localStorage.getItem('daily_meta') || '08:00';
+    dailyMetaInput.value = savedMeta;
+
+    // Converte minutos para string legível (ex: +2h 15m ou -0h 45m)
+    function formatMinutesToHours(minutes, showSign = false) {
+      const isNeg = minutes < 0;
+      const absMin = Math.abs(minutes);
+      const h = Math.floor(absMin / 60);
+      const m = absMin % 60;
+      const formatted = `${h}h ${String(m).padStart(2, '0')}m`;
+      
+      if (minutes === 0) return `0h 00m`;
+      if (isNeg) return `-${formatted}`;
+      return showSign ? `+${formatted}` : formatted;
+    }
+
+    function timeToMinutes(timeStr) {
+      if (!timeStr) return 0;
+      const [h, m] = timeStr.split(':').map(Number);
+      return (h || 0) * 60 + (m || 0);
+    }
+
+    // Calcula período considerando eventual virada de dia/madrugada
+    function calculatePeriodMinutes(start, end) {
+      if (!start || !end) return 0;
+      let startM = timeToMinutes(start);
+      let endM = timeToMinutes(end);
+      if (endM < startM) {
+        endM += 24 * 60; // Passou da meia-noite
+      }
+      return endM - startM;
+    }
+
+    function getStorageKey(yearMonth) {
+      return `timesheet_${yearMonth}`;
+    }
+
+    function getMonthData(yearMonth) {
+      const raw = localStorage.getItem(getStorageKey(yearMonth));
+      return raw ? JSON.parse(raw) : {};
+    }
+
+    function saveMonthData(yearMonth, data) {
+      localStorage.setItem(getStorageKey(yearMonth), JSON.stringify(data));
+    }
+
+    function renderMonth() {
+      const ym = monthPicker.value;
+      if (!ym) return;
+
+      const [year, month] = ym.split('-').map(Number);
+      const totalDays = new Date(year, month, 0).getDate();
+      const monthData = getMonthData(ym);
+      const standardMetaMinutes = timeToMinutes(dailyMetaInput.value);
+
+      daysBody.innerHTML = '';
+
+      let grandTotalWorked = 0;
+      let grandTotalExpected = 0;
+
+      let currentWeekWorked = 0;
+      let currentWeekExpected = 0;
+      let currentWeekNumber = 1;
+
+      for (let day = 1; day <= totalDays; day++) {
+        const dateObj = new Date(year, month - 1, day);
+        const dayOfWeek = dateObj.getDay();
+        const dateKey = `${ym}-${String(day).padStart(2, '0')}`;
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        
+        // Padrão: dias úteis (Seg-Sex) iniciam com 08:00-12:00 e 13:00-17:00 (8h, saldo 0)
+        const defaultRecord = isWeekend ? {
+          mIn: '', mOut: '',
+          aIn: '', aOut: '',
+          nIn: '', nOut: '',
+          customMeta: ''
+        } : {
+          mIn: '08:00', mOut: '12:00',
+          aIn: '13:00', aOut: '17:00',
+          nIn: '', nOut: '',
+          customMeta: ''
+        };
+
+        // Dados salvos ou padrão inicial
+        const record = monthData[dateKey] !== undefined ? monthData[dateKey] : defaultRecord;
+
+        const morningMin = calculatePeriodMinutes(record.mIn, record.mOut);
+        const afterMin = calculatePeriodMinutes(record.aIn, record.aOut);
+        const nightMin = calculatePeriodMinutes(record.nIn, record.nOut);
+        const dayWorkedMin = morningMin + afterMin + nightMin;
+
+        // Meta padrão: dias úteis (Seg-Sex) usam a meta padrão. Finais de semana meta 0, a menos que customizado.
+        let dayExpectedMin = isWeekend ? 0 : standardMetaMinutes;
+        
+        if (record.customMeta !== undefined && record.customMeta !== '') {
+          dayExpectedMin = timeToMinutes(record.customMeta);
+        }
+
+        const dayBalance = dayWorkedMin - dayExpectedMin;
+
+        grandTotalWorked += dayWorkedMin;
+        grandTotalExpected += dayExpectedMin;
+        currentWeekWorked += dayWorkedMin;
+        currentWeekExpected += dayExpectedMin;
+
+        // Cria a linha do dia
+        const tr = document.createElement('tr');
+        if (isWeekend) tr.classList.add('weekend-row');
+
+        let balanceBadge = `<span class="badge badge-neutral">0h 00m</span>`;
+        if (dayBalance > 0) {
+          balanceBadge = `<span class="badge badge-positive">+${formatMinutesToHours(dayBalance)} (Extra)</span>`;
+        } else if (dayBalance < 0) {
+          balanceBadge = `<span class="badge badge-negative">${formatMinutesToHours(dayBalance)} (Devendo)</span>`;
+        } else if (dayWorkedMin > 0) {
+          balanceBadge = `<span class="badge badge-neutral">No limite (0h)</span>`;
+        }
+
+        const dateFormatted = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+
+        tr.innerHTML = `
+          <td><strong>${dateFormatted}</strong></td>
+          <td style="color: ${isWeekend ? '#ef4444' : '#1e293b'}">${dayNames[dayOfWeek]}</td>
+          
+          <td><input type="time" data-date="${dateKey}" data-field="mIn" value="${record.mIn}"></td>
+          <td><input type="time" data-date="${dateKey}" data-field="mOut" value="${record.mOut}"></td>
+          
+          <td><input type="time" data-date="${dateKey}" data-field="aIn" value="${record.aIn}"></td>
+          <td><input type="time" data-date="${dateKey}" data-field="aOut" value="${record.aOut}"></td>
+          
+          <td><input type="time" data-date="${dateKey}" data-field="nIn" value="${record.nIn}"></td>
+          <td><input type="time" data-date="${dateKey}" data-field="nOut" value="${record.nOut}"></td>
+          
+          <td style="text-align: center; font-weight: 600;">${formatMinutesToHours(dayWorkedMin)}</td>
+          <td style="text-align: center;">
+            <input type="time" data-date="${dateKey}" data-field="customMeta" title="Meta deste dia" style="width: 78px;" value="${record.customMeta !== undefined && record.customMeta !== '' ? record.customMeta : (isWeekend ? '' : dailyMetaInput.value)}">
+          </td>
+          <td style="text-align: center;">${balanceBadge}</td>
+        `;
+
+        daysBody.appendChild(tr);
+
+        // Se for Domingo ou o último dia do mês, adiciona o resumo da semana
+        if (dayOfWeek === 0 || day === totalDays) {
+          const weekBalance = currentWeekWorked - currentWeekExpected;
+          const weekTr = document.createElement('tr');
+          weekTr.className = 'week-summary-row';
+
+          let weekBadgeClass = 'text-neutral';
+          if (weekBalance > 0) weekBadgeClass = 'text-success';
+          else if (weekBalance < 0) weekBadgeClass = 'text-danger';
+
+          weekTr.innerHTML = `
+            <td colspan="8" style="text-align: right; padding-right: 16px;">
+              📊 <strong>Subtotal da Semana ${currentWeekNumber}</strong>
+            </td>
+            <td style="text-align: center;">${formatMinutesToHours(currentWeekWorked)}</td>
+            <td style="text-align: center;">${formatMinutesToHours(currentWeekExpected)}</td>
+            <td style="text-align: center;" class="${weekBadgeClass}">
+              ${formatMinutesToHours(weekBalance, true)}
+            </td>
+          `;
+          daysBody.appendChild(weekTr);
+
+          // Reset para a próxima semana
+          currentWeekWorked = 0;
+          currentWeekExpected = 0;
+          currentWeekNumber++;
+        }
+      }
+
+      // Atualiza os cards de cabeçalho
+      const grandBalance = grandTotalWorked - grandTotalExpected;
+      totalWorkedEl.innerText = formatMinutesToHours(grandTotalWorked);
+      totalExpectedEl.innerText = formatMinutesToHours(grandTotalExpected);
+      totalBalanceEl.innerText = formatMinutesToHours(grandBalance, true);
+
+      cardBalance.classList.remove('positive', 'negative');
+      totalBalanceEl.classList.remove('text-success', 'text-danger', 'text-neutral');
+
+      if (grandBalance > 0) {
+        cardBalance.classList.add('positive');
+        totalBalanceEl.classList.add('text-success');
+      } else if (grandBalance < 0) {
+        cardBalance.classList.add('negative');
+        totalBalanceEl.classList.add('text-danger');
+      } else {
+        totalBalanceEl.classList.add('text-neutral');
+      }
+    }
+
+    // Eventos de alteração de horário
+    daysBody.addEventListener('change', (e) => {
+      if (e.target.tagName.toLowerCase() === 'input') {
+        const dateKey = e.target.getAttribute('data-date');
+        const field = e.target.getAttribute('data-field');
+        const ym = monthPicker.value;
+
+        const monthData = getMonthData(ym);
+        if (!monthData[dateKey]) {
+          // Pega o valor atual dos outros inputs daquela linha para não zerar os demais
+          const tr = e.target.closest('tr');
+          monthData[dateKey] = {
+            mIn: tr.querySelector('[data-field="mIn"]').value,
+            mOut: tr.querySelector('[data-field="mOut"]').value,
+            aIn: tr.querySelector('[data-field="aIn"]').value,
+            aOut: tr.querySelector('[data-field="aOut"]').value,
+            nIn: tr.querySelector('[data-field="nIn"]').value,
+            nOut: tr.querySelector('[data-field="nOut"]').value,
+            customMeta: tr.querySelector('[data-field="customMeta"]').value
+          };
+        }
+        monthData[dateKey][field] = e.target.value;
+        saveMonthData(ym, monthData);
+        renderMonth();
+      }
+    });
+
+    monthPicker.addEventListener('change', () => {
+      renderMonth();
+    });
+
+    dailyMetaInput.addEventListener('change', () => {
+      localStorage.setItem('daily_meta', dailyMetaInput.value);
+      renderMonth();
+    });
+
+    function resetToDefaults() {
+      const ym = monthPicker.value;
+      if (confirm(`Deseja restaurar todos os dias de ${ym} para o horário padrão (08h-12h e 13h-17h)?`)) {
+        localStorage.removeItem(getStorageKey(ym));
+        renderMonth();
+      }
+    }
+
+    function clearCurrentMonth() {
+      const ym = monthPicker.value;
+      if (confirm(`Tem certeza que deseja apagar todos os lançamentos de ${ym} deixando tudo em branco?`)) {
+        const [year, month] = ym.split('-').map(Number);
+        const totalDays = new Date(year, month, 0).getDate();
+        const emptyData = {};
+        for (let d = 1; d <= totalDays; d++) {
+          const k = `${ym}-${String(d).padStart(2, '0')}`;
+          emptyData[k] = { mIn: '', mOut: '', aIn: '', aOut: '', nIn: '', nOut: '', customMeta: '' };
+        }
+        saveMonthData(ym, emptyData);
+        renderMonth();
+      }
+    }
+
+    // Render inicial
+    renderMonth();
+  </script>
+</body>
+</html>
