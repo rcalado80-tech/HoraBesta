@@ -375,7 +375,7 @@
           <div class="summary-value" id="totalExpected">0h 00m</div>
         </div>
         <div class="summary-card" id="cardBalance">
-          <div class="summary-title">Saldo Geral (Mês)</div>
+          <div class="summary-title">Banco de Horas (Saldo)</div>
           <div class="summary-value" id="totalBalance">0h 00m</div>
         </div>
       </div>
@@ -392,7 +392,7 @@
             <th colspan="2" class="period-header">Noite</th>
             <th rowspan="2" style="text-align: center;">Horas Feitas</th>
             <th rowspan="2" style="text-align: center;">Meta</th>
-            <th rowspan="2" style="text-align: center;">Saldo do Dia</th>
+            <th rowspan="2" style="text-align: center;">Saldo P/ Banco</th>
           </tr>
           <tr>
             <th class="period-header">Entrada</th>
@@ -490,9 +490,11 @@
 
       let grandTotalWorked = 0;
       let grandTotalExpected = 0;
+      let grandTotalBank = 0;
 
       let currentWeekWorked = 0;
       let currentWeekExpected = 0;
+      let currentWeekBank = 0;
       let currentWeekNumber = 1;
 
       for (let day = 1; day <= totalDays; day++) {
@@ -529,24 +531,54 @@
           dayExpectedMin = timeToMinutes(record.customMeta);
         }
 
-        const dayBalance = dayWorkedMin - dayExpectedMin;
+        const rawDifference = dayWorkedMin - dayExpectedMin;
+        let dayBankBalance = 0;
+        let badgeNote = "";
+
+        if (isWeekend) {
+          // Fim de semana: gera hora extra em dobro (100%)
+          if (rawDifference > 0) {
+            dayBankBalance = rawDifference * 2;
+            badgeNote = " (100% 2x)";
+          } else {
+            dayBankBalance = rawDifference;
+          }
+        } else {
+          // Dias de semana:
+          if (rawDifference > 0) {
+            // Só contabiliza hora extra se for a partir de 16 minutos extras (ex: 15 min = 0)
+            if (rawDifference >= 16) {
+              dayBankBalance = rawDifference;
+              badgeNote = " (Extra)";
+            } else {
+              dayBankBalance = 0; // Desconsidera extras inferiores a 16 min
+              badgeNote = " (<16m descons.)";
+            }
+          } else if (rawDifference < 0) {
+            dayBankBalance = rawDifference;
+            badgeNote = " (Devendo)";
+          }
+        }
 
         grandTotalWorked += dayWorkedMin;
         grandTotalExpected += dayExpectedMin;
+        grandTotalBank += dayBankBalance;
+
         currentWeekWorked += dayWorkedMin;
         currentWeekExpected += dayExpectedMin;
+        currentWeekBank += dayBankBalance;
 
         // Cria a linha do dia
         const tr = document.createElement('tr');
         if (isWeekend) tr.classList.add('weekend-row');
 
         let balanceBadge = `<span class="badge badge-neutral">0h 00m</span>`;
-        if (dayBalance > 0) {
-          balanceBadge = `<span class="badge badge-positive">+${formatMinutesToHours(dayBalance)} (Extra)</span>`;
-        } else if (dayBalance < 0) {
-          balanceBadge = `<span class="badge badge-negative">${formatMinutesToHours(dayBalance)} (Devendo)</span>`;
+        if (dayBankBalance > 0) {
+          balanceBadge = `<span class="badge badge-positive">+${formatMinutesToHours(dayBankBalance)}${badgeNote}</span>`;
+        } else if (dayBankBalance < 0) {
+          balanceBadge = `<span class="badge badge-negative">${formatMinutesToHours(dayBankBalance)}${badgeNote}</span>`;
         } else if (dayWorkedMin > 0) {
-          balanceBadge = `<span class="badge badge-neutral">No limite (0h)</span>`;
+          balanceBadge = `<span class="badge badge-neutral">0h 00m${badgeNote}</span>`;
         }
 
         const dateFormatted = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
@@ -575,13 +607,12 @@
 
         // Se for Domingo ou o último dia do mês, adiciona o resumo da semana
         if (dayOfWeek === 0 || day === totalDays) {
-          const weekBalance = currentWeekWorked - currentWeekExpected;
           const weekTr = document.createElement('tr');
           weekTr.className = 'week-summary-row';
 
           let weekBadgeClass = 'text-neutral';
-          if (weekBalance > 0) weekBadgeClass = 'text-success';
-          else if (weekBalance < 0) weekBadgeClass = 'text-danger';
+          if (currentWeekBank > 0) weekBadgeClass = 'text-success';
+          else if (currentWeekBank < 0) weekBadgeClass = 'text-danger';
 
           weekTr.innerHTML = `
             <td colspan="8" style="text-align: right; padding-right: 16px;">
@@ -590,7 +621,7 @@
             <td style="text-align: center;">${formatMinutesToHours(currentWeekWorked)}</td>
             <td style="text-align: center;">${formatMinutesToHours(currentWeekExpected)}</td>
             <td style="text-align: center;" class="${weekBadgeClass}">
-              ${formatMinutesToHours(weekBalance, true)}
+              ${formatMinutesToHours(currentWeekBank, true)}
             </td>
           `;
           daysBody.appendChild(weekTr);
@@ -598,23 +629,23 @@
           // Reset para a próxima semana
           currentWeekWorked = 0;
           currentWeekExpected = 0;
+          currentWeekBank = 0;
           currentWeekNumber++;
         }
       }
 
       // Atualiza os cards de cabeçalho
-      const grandBalance = grandTotalWorked - grandTotalExpected;
       totalWorkedEl.innerText = formatMinutesToHours(grandTotalWorked);
       totalExpectedEl.innerText = formatMinutesToHours(grandTotalExpected);
-      totalBalanceEl.innerText = formatMinutesToHours(grandBalance, true);
+      totalBalanceEl.innerText = formatMinutesToHours(grandTotalBank, true);
 
       cardBalance.classList.remove('positive', 'negative');
       totalBalanceEl.classList.remove('text-success', 'text-danger', 'text-neutral');
 
-      if (grandBalance > 0) {
+      if (grandTotalBank > 0) {
         cardBalance.classList.add('positive');
         totalBalanceEl.classList.add('text-success');
-      } else if (grandBalance < 0) {
+      } else if (grandTotalBank < 0) {
         cardBalance.classList.add('negative');
         totalBalanceEl.classList.add('text-danger');
       } else {
